@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Interactive Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<style>
+  html, body { height: 100%; margin: 0; }
+  #map { height: 100%; }
+  .flag-popup {
+    position: absolute;
+    background: transparent;
+    border: none;
+    pointer-events: none;
+    transform: translate(-50%, -100%);
+  }
+  .flag-popup img {
+    height: 40px;
+    border: 2px solid white;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+
+// 1. Create map
+var map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: -2
+});
+
+// 2. Load background image (BIG_MAP.png)
+var w = 18657, h = 18658; // <-- change to your actual image width & height in pixels
+var imageUrl = 'BIG_MAP.png';
+var imageBounds = [[0,0], [h,w]];
+L.imageOverlay(imageUrl, imageBounds).addTo(map);
+map.fitBounds(imageBounds);
+
+// 3. Create a flag popup div
+var flagDiv = L.DomUtil.create('div', 'flag-popup');
+document.body.appendChild(flagDiv);
+
+// 4. Load polygons
+fetch('faction_polygons_with_flags.geojson')
+  .then(r => r.json())
+  .then(data => {
+    L.geoJSON(data, {
+      style: function(feature) {
+        return {
+          color: feature.properties.color || '#000',
+          weight: 2,
+          fillOpacity: 0.5
+        };
+      },
+      onEachFeature: function(feature, layer) {
+        layer.on('mouseover', function(e) {
+          if (feature.properties.flag) {
+            var center = layer.getBounds().getCenter();
+            var point = map.latLngToContainerPoint(center);
+            flagDiv.innerHTML = `<img src="${feature.properties.flag}">`;
+            flagDiv.style.left = point.x + 'px';
+            flagDiv.style.top = point.y + 'px';
+            flagDiv.style.display = 'block';
+          }
+        });
+        layer.on('mouseout', function(e) {
+          flagDiv.style.display = 'none';
+        });
+        layer.on('mousemove', function(e) {
+          var point = map.latLngToContainerPoint(e.latlng);
+          flagDiv.style.left = point.x + 'px';
+          flagDiv.style.top = point.y + 'px';
+        });
+      }
+    }).addTo(map);
+  });
+
+</script>
+</body>
+</html>
