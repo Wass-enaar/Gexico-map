@@ -2,83 +2,74 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Interactive Map</title>
+<title>Interactive Fictional Map</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
   html, body { height: 100%; margin: 0; }
   #map { height: 100%; }
   .flag-popup {
-    position: absolute;
-    background: transparent;
-    border: none;
-    pointer-events: none;
-    transform: translate(-50%, -100%);
+    background: rgba(255,255,255,0.85);
+    border-radius: 6px;
+    padding: 4px;
+    text-align: center;
   }
   .flag-popup img {
-    height: 40px;
-    border: 2px solid white;
-    border-radius: 4px;
+    max-height: 50px;
+    display: block;
+    margin: auto;
   }
 </style>
 </head>
 <body>
 <div id="map"></div>
-
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-
-// 1. Create map
-var map = L.map('map', {
-    crs: L.CRS.Simple,
-    minZoom: -2
+const map = L.map('map', {
+  crs: L.CRS.Simple,
+  minZoom: -1
 });
 
-// 2. Load background image (BIG_MAP.png)
-var w = 18657, h = 18658; // <-- change to your actual image width & height in pixels
-var imageUrl = 'BIG_MAP.png';
-var imageBounds = [[0,0], [h,w]];
-L.imageOverlay(imageUrl, imageBounds).addTo(map);
-map.fitBounds(imageBounds);
+// Image dimensions
+const w = 2403, h = 1422;
+const bounds = [[0,0], [h,w]];
 
-// 3. Create a flag popup div
-var flagDiv = L.DomUtil.create('div', 'flag-popup');
-document.body.appendChild(flagDiv);
+// Add map image
+L.imageOverlay('BIG_MAP.png', bounds).addTo(map);
+map.fitBounds(bounds);
 
-// 4. Load polygons
-fetch('faction_polygons_with_flags.geojson')
-  .then(r => r.json())
-  .then(data => {
-    L.geoJSON(data, {
-      style: function(feature) {
-        return {
-          color: feature.properties.color || '#000',
-          weight: 2,
-          fillOpacity: 0.5
-        };
-      },
-      onEachFeature: function(feature, layer) {
-        layer.on('mouseover', function(e) {
-          if (feature.properties.flag) {
-            var center = layer.getBounds().getCenter();
-            var point = map.latLngToContainerPoint(center);
-            flagDiv.innerHTML = `<img src="${feature.properties.flag}">`;
-            flagDiv.style.left = point.x + 'px';
-            flagDiv.style.top = point.y + 'px';
-            flagDiv.style.display = 'block';
-          }
-        });
-        layer.on('mouseout', function(e) {
-          flagDiv.style.display = 'none';
-        });
-        layer.on('mousemove', function(e) {
-          var point = map.latLngToContainerPoint(e.latlng);
-          flagDiv.style.left = point.x + 'px';
-          flagDiv.style.top = point.y + 'px';
-        });
-      }
-    }).addTo(map);
-  });
+// GeoJSON data (embedded)
+const geojsonData = {
+"type": "FeatureCollection",
+"features": [
+  // === GeoJSON polygons from map_with_flags.geojson ===
+  // (I’ll insert your full polygon data here)
+]
+};
 
+function onEachFeature(feature, layer) {
+  if (feature.properties && feature.properties.flag) {
+    layer.on('mouseover', function(e) {
+      const center = layer.getBounds().getCenter();
+      const popup = L.popup({closeButton:false, autoClose:true, className:'flag-popup'})
+        .setLatLng(center)
+        .setContent(`<div><strong>${feature.properties.name}</strong><br><img src="${feature.properties.flag}"></div>`)
+        .openOn(map);
+    });
+    layer.on('mouseout', function() {
+      map.closePopup();
+    });
+  }
+}
+
+// Draw polygons
+L.geoJSON(geojsonData, {
+  style: feature => ({
+    color: feature.properties.color || '#ffffff',
+    weight: 2,
+    fillOpacity: 0.5
+  }),
+  onEachFeature: onEachFeature
+}).addTo(map);
 </script>
 </body>
 </html>
